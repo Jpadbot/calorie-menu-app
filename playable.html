@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>卡路里餐牌 · 香港 v0</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a222d;
+    --card2: #232d3b;
+    --line: #2e3a4a;
+    --text: #f2f5f8;
+    --muted: #8b9aab;
+    --accent: #3dd68c;
+    --accent2: #5b8cff;
+    --warn: #ffb020;
+    --danger: #ff6b6b;
+    --chip: #2a3544;
+    --ok: #3dd68c;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+    font-size: 15px; line-height: 1.45;
+    overflow: hidden;
+  }
+  #app {
+    height: 100%; max-width: 480px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    padding-top: var(--safe-top);
+  }
+  header.app-bar {
+    flex: 0 0 auto;
+    padding: 12px 16px 8px;
+    background: linear-gradient(180deg, #15202b 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--line);
+  }
+  header.app-bar h1 {
+    margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.02em;
+  }
+  header.app-bar .sub {
+    margin-top: 2px; font-size: 12px; color: var(--muted);
+  }
+  .summary-card {
+    margin: 10px 12px 0;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #1c2a22 0%, #1a2433 100%);
+    border: 1px solid #2a4034;
+    border-radius: 14px;
+  }
+  .summary-row {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  }
+  .kcal-big {
+    font-size: 28px; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .kcal-big span { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+  .tip {
+    margin-top: 8px; font-size: 13px; padding: 8px 10px;
+    border-radius: 10px; background: var(--card2); color: var(--text);
+  }
+  .tip.low { border-left: 3px solid var(--accent2); }
+  .tip.ok { border-left: 3px solid var(--ok); }
+  .tip.high { border-left: 3px solid var(--warn); }
+  .tip.very-high { border-left: 3px solid var(--danger); }
+
+  .chart-wrap {
+    margin: 10px 12px 0;
+    padding: 10px 12px 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .chart-title {
+    font-size: 12px; color: var(--muted); margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .chart {
+    display: flex; align-items: flex-end; gap: 6px; height: 72px;
+  }
+  .bar-col {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%;
+    justify-content: flex-end;
+  }
+  .bar {
+    width: 100%; max-width: 36px; border-radius: 6px 6px 3px 3px;
+    background: linear-gradient(180deg, var(--accent) 0%, #2a9b66 100%);
+    min-height: 3px; transition: height 0.25s ease;
+  }
+  .bar.today { background: linear-gradient(180deg, #7dffb3 0%, var(--accent) 100%); box-shadow: 0 0 10px rgba(61,214,140,0.35); }
+  .bar-label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .bar-val { font-size: 9px; color: var(--text); opacity: 0.8; }
+
+  .tabs {
+    display: flex; gap: 4px; padding: 10px 12px 0; flex: 0 0 auto;
+  }
+  .tab {
+    flex: 1; border: 1px solid var(--line); background: var(--card);
+    color: var(--muted); border-radius: 10px; padding: 9px 4px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .tab.active {
+    background: var(--accent2); color: #fff; border-color: transparent;
+  }
+
+  main {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 10px 12px calc(16px + var(--safe-bot));
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .chain-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+  }
+  .chain-btn {
+    border: 1px solid var(--line); background: var(--card);
+    color: var(--text); border-radius: 12px; padding: 12px 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer; text-align: left;
+  }
+  .chain-btn.active {
+    border-color: var(--accent); background: #1a2e24;
+    box-shadow: inset 0 0 0 1px rgba(61,214,140,0.35);
+  }
+  .chain-btn small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+  .portion-row {
+    display: flex; gap: 6px; margin-bottom: 10px; align-items: center;
+  }
+  .portion-row > span { font-size: 12px; color: var(--muted); flex: 0 0 auto; }
+  .portion {
+    flex: 1; border: 1px solid var(--line); background: var(--chip);
+    color: var(--text); border-radius: 999px; padding: 7px 0;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .portion.active { background: var(--accent); color: #062214; border-color: transparent; }
+
+  .menu-list { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .item .info { flex: 1; min-width: 0; }
+  .item .name { font-weight: 650; font-size: 14px; }
+  .item .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: 999px; background: #2a3544; color: #a8b8c8;
+    margin-left: 4px; vertical-align: middle;
+  }
+  .badge.est { background: #3a2e1a; color: var(--warn); }
+  .item .kcal { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); font-size: 13px; white-space: nowrap; }
+  .add-btn {
+    flex: 0 0 auto; border: none; background: var(--accent2);
+    color: #fff; border-radius: 10px; padding: 8px 12px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .add-btn:active { transform: scale(0.96); }
+
+  .estimate-box {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px;
+  }
+  .estimate-box label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .estimate-box textarea {
+    width: 100%; min-height: 88px; resize: vertical;
+    background: var(--card2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; font-size: 14px; font-family: inherit;
+  }
+  .estimate-box .actions {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .btn {
+    flex: 1; border: none; border-radius: 10px; padding: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); color: #062214; }
+  .btn.ghost { background: var(--chip); color: var(--text); border: 1px solid var(--line); }
+  .est-results { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .hint {
+    font-size: 12px; color: var(--muted); margin: 8px 0 0;
+  }
+
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .log-item .info { flex: 1; min-width: 0; }
+  .log-item .name { font-weight: 650; font-size: 14px; }
+  .log-item .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .log-item .kcal { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .del-btn {
+    border: none; background: transparent; color: var(--danger);
+    font-size: 18px; line-height: 1; padding: 0 4px; cursor: pointer;
+  }
+  .empty {
+    text-align: center; color: var(--muted); padding: 28px 12px;
+    font-size: 14px;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + var(--safe-bot));
+    transform: translateX(-50%) translateY(20px);
+    background: #1e2a1f; color: var(--accent); border: 1px solid #2f4a38;
+    padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 50;
+    max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .src-note {
+    font-size: 11px; color: var(--muted); margin: 4px 0 10px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 700; margin: 4px 0 8px; color: var(--text);
+  }
+  .clear-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .linkish {
+    background: none; border: none; color: var(--muted); font-size: 12px;
+    text-decoration: underline; cursor: pointer; padding: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="app-bar">
+    <h1>卡路里餐牌</h1>
+    <div class="sub">香港連鎖種子 · 茶餐廳估算 · 本地日誌</div>
+  </header>
+
+  <div class="summary-card" id="summaryCard">
+    <div class="summary-row">
+      <div>
+        <div style="font-size:12px;color:var(--muted)">今日攝取</div>
+        <div class="kcal-big" id="todayTotal">0<span>kcal</span></div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:var(--muted)">
+        建議<br/><strong style="color:var(--text);font-size:14px">1800–2200</strong>
+      </div>
+    </div>
+    <div class="tip ok" id="nutritionTip">今天還沒有記錄。先從餐牌加入一項吧。</div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">
+      <span>近 7 日總量</span>
+      <span id="chartLegend" style="font-size:11px">單位 kcal</span>
+    </div>
+    <div class="chart" id="chart"></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="chains" type="button">連鎖餐牌</button>
+    <button class="tab" data-tab="estimate" type="button">茶餐廳估算</button>
+    <button class="tab" data-tab="log" type="button">今日日誌</button>
+  </div>
+
+  <main>
+    <section class="panel active" id="panel-chains">
+      <div class="chain-grid" id="chainGrid"></div>
+      <div class="portion-row">
+        <span>份量</span>
+        <button class="portion" data-p="0.5" type="button">半份 ×0.5</button>
+        <button class="portion active" data-p="1" type="button">一份 ×1</button>
+        <button class="portion" data-p="1.5" type="button">多於一份 ×1.5</button>
+      </div>
+      <p class="src-note">卡路里為公開參考級近似值，標「種子／參考」，非官方精確營養表。</p>
+      <div class="menu-list" id="menuList"></div>
+    </section>
+
+    <section class="panel" id="panel-estimate">
+      <div class="estimate-box">
+        <label for="estInput">貼上或輸入餐單（逗號／頓號／換行分隔）</label>
+        <textarea id="estInput" placeholder="例：乾炒牛河、凍檸茶、煎蛋、白飯"></textarea>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="estClear">清除</button>
+          <button class="btn primary" type="button" id="estRun">拆分估算</button>
+        </div>
+        <p class="hint">未匹配項會給保守預設並標「估算」。結果可逐項加入今日日誌。</p>
+      </div>
+      <div class="est-results" id="estResults"></div>
+    </section>
+
+    <section class="panel" id="panel-log">
+      <div class="clear-row">
+        <button class="linkish" type="button" id="clearToday">清除今日日誌</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'calorie-menu-v0-log';
+  const GOAL_LOW = 1800;
+  const GOAL_HIGH = 2200;
+  const PORTION_LABELS = { 0.5: '半份', 1: '一份', 1.5: '多於一份' };
+
+  /** 種子／參考：常見公開近似值，非官方精確表 */
+  const MENU = {
+    '大家樂': [
+      { name: '豉汁排骨飯', kcal: 720 },
+      { name: '咖喱牛腩飯', kcal: 780 },
+      { name: '揚州炒飯', kcal: 650 },
+      { name: '番茄豬扒飯', kcal: 690 },
+      { name: '蜜汁雞腿飯', kcal: 710 },
+      { name: '鮮茄牛肉意粉', kcal: 620 },
+      { name: '西式早餐 A', kcal: 580 },
+      { name: '奶茶（熱）', kcal: 180 },
+      { name: '凍檸茶', kcal: 120 },
+      { name: '粟米魚塊飯', kcal: 700 },
+      { name: '忌廉湯', kcal: 160 },
+      { name: '蛋撻', kcal: 250 }
+    ],
+    '大快活': [
+      { name: '叉燒飯', kcal: 700 },
+      { name: '豉油雞飯', kcal: 680 },
+      { name: '乾炒牛河', kcal: 780 },
+      { name: '星洲炒米', kcal: 640 },
+      { name: '番茄濃湯意粉', kcal: 560 },
+      { name: '燒味雙拼飯', kcal: 820 },
+      { name: '海南雞飯', kcal: 720 },
+      { name: '凍檸樂', kcal: 140 },
+      { name: '咖啡（熱）', kcal: 60 },
+      { name: '菠蘿油', kcal: 380 },
+      { name: '法式多士', kcal: 420 },
+      { name: '忌廉雞湯', kcal: 170 }
+    ],
+    '譚仔': [
+      { name: '譚仔米線（微辣）', kcal: 520 },
+      { name: '譚仔米線（中辣）', kcal: 530 },
+      { name: '譚仔米線（勁辣）', kcal: 540 },
+      { name: '肥牛加料', kcal: 180 },
+      { name: '炸魚皮加料', kcal: 220 },
+      { name: '魚蛋加料', kcal: 150 },
+      { name: '青菜加料', kcal: 40 },
+      { name: '黃金蛋加料', kcal: 90 },
+      { name: '酸辣湯底升級', kcal: 30 },
+      { name: '凍奶茶', kcal: 200 },
+      { name: '凍豆漿', kcal: 90 },
+      { name: '小食拼盤', kcal: 350 }
+    ],
+    '麥當勞': [
+      { name: '巨無霸', kcal: 540 },
+      { name: '芝士漢堡', kcal: 300 },
+      { name: '麥香雞', kcal: 430 },
+      { name: '麥樂雞（6件）', kcal: 260 },
+      { name: '中薯條', kcal: 340 },
+      { name: '大薯條', kcal: 450 },
+      { name: '板燒雞腿飽', kcal: 420 },
+      { name: '魚柳飽', kcal: 380 },
+      { name: '蘋果批', kcal: 250 },
+      { name: '可口可樂（中）', kcal: 170 },
+      { name: '熱朱古力', kcal: 200 },
+      { name: '豬柳蛋漢堡', kcal: 460 }
+    ]
+  };
+
+  /** 茶餐廳／常見關鍵詞基準表（估算） */
+  const EST_RULES = [
+    { keys: ['乾炒牛河', '炒河', '牛河'], kcal: 780 },
+    { keys: ['乾炒伊麵', '炒伊麵', '伊麵'], kcal: 720 },
+    { keys: ['星洲炒米', '炒米'], kcal: 640 },
+    { keys: ['炒飯', '揚州炒飯'], kcal: 650 },
+    { keys: ['白飯', '飯'], kcal: 280 },
+    { keys: ['粥', '皮蛋瘦肉粥', '魚片粥'], kcal: 220 },
+    { keys: ['雲吞麵', '雲吞'], kcal: 450 },
+    { keys: ['湯麵', '麵'], kcal: 420 },
+    { keys: ['米線', '米粉'], kcal: 500 },
+    { keys: ['意粉', '意大利粉', '粉'], kcal: 560 },
+    { keys: ['叉燒', '燒味', '燒鴨', '燒鵝'], kcal: 320 },
+    { keys: ['排骨', '豬扒', '牛腩', '牛肉', '牛'], kcal: 280 },
+    { keys: ['雞腿', '雞翼', '雞'], kcal: 250 },
+    { keys: ['魚', '魚柳', '蒸魚'], kcal: 200 },
+    { keys: ['蝦', '海鮮'], kcal: 160 },
+    { keys: ['煎蛋', '炒蛋', '蛋'], kcal: 110 },
+    { keys: ['菜心', '芥蘭', '西蘭花', '青菜', '菜'], kcal: 60 },
+    { keys: ['豆腐'], kcal: 90 },
+    { keys: ['菠蘿油', '油'], kcal: 380 },
+    { keys: ['多士', '吐司', '麵包'], kcal: 280 },
+    { keys: ['蛋撻', '撻'], kcal: 250 },
+    { keys: ['西多士'], kcal: 480 },
+    { keys: ['凍檸茶', '檸茶'], kcal: 120 },
+    { keys: ['凍奶茶', '奶茶'], kcal: 200 },
+    { keys: ['凍檸樂', '可樂', '汽水'], kcal: 140 },
+    { keys: ['咖啡'], kcal: 60 },
+    { keys: ['豆漿'], kcal: 90 },
+    { keys: ['果汁', '橙汁'], kcal: 110 },
+    { keys: ['湯', '例湯', '忌廉湯'], kcal: 120 },
+    { keys: ['餃子', '煎餃'], kcal: 280 },
+    { keys: ['腸粉'], kcal: 260 },
+    { keys: ['燒賣', '點心'], kcal: 180 },
+    { keys: ['薯條'], kcal: 340 },
+    { keys: ['漢堡', '飽'], kcal: 450 }
+  ];
+  const EST_DEFAULT = 350;
+
+  let state = {
+    chain: '大家樂',
+    portion: 1,
+    tab: 'chains',
+    days: {} // { 'YYYY-MM-DD': [entries] }
+  };
+
+  function todayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') state.days = parsed.days || parsed;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ days: state.days, v: 1 }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function uid() {
+    return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function dayEntries(key) {
+    return state.days[key] || [];
+  }
+
+  function dayTotal(key) {
+    return dayEntries(key).reduce(function (s, e) { return s + (e.kcal || 0); }, 0);
+  }
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { el.classList.remove('show'); }, 1600);
+  }
+
+  function tipFor(total) {
+    const el = document.getElementById('nutritionTip');
+    el.className = 'tip';
+    if (total <= 0) {
+      el.classList.add('ok');
+      el.textContent = '今天還沒有記錄。先從餐牌加入一項吧。';
+      return;
+    }
+    if (total < GOAL_LOW) {
+      el.classList.add('low');
+      el.textContent = '目前 ' + total + ' kcal，低於建議下限 ' + GOAL_LOW + '——可能還不夠，記得補均衡一餐。';
+    } else if (total <= GOAL_HIGH) {
+      el.classList.add('ok');
+      el.textContent = '目前 ' + total + ' kcal，落在建議範圍 ' + GOAL_LOW + '–' + GOAL_HIGH + '——大致適中。';
+    } else if (total <= GOAL_HIGH + 600) {
+      el.classList.add('high');
+      el.textContent = '目前 ' + total + ' kcal，略高於建議上限——今天可選清淡一點。';
+    } else {
+      el.classList.add('very-high');
+      el.textContent = '目前 ' + total + ' kcal，明顯偏高——留意下餐份量與油炸物。';
+    }
+  }
+
+  function renderSummary() {
+    const t = dayTotal(todayKey());
+    document.getElementById('todayTotal').innerHTML = t + '<span>kcal</span>';
+    tipFor(t);
+  }
+
+  function lastNDates(n) {
+    const out = [];
+    const d = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const x = new Date(d);
+      x.setDate(d.getDate() - i);
+      const y = x.getFullYear();
+      const m = String(x.getMonth() + 1).padStart(2, '0');
+      const day = String(x.getDate()).padStart(2, '0');
+      out.push({
+        key: y + '-' + m + '-' + day,
+        label: (x.getMonth() + 1) + '/' + x.getDate(),
+        isToday: i === 0
+      });
+    }
+    return out;
+  }
+
+  function renderChart() {
+    const days = lastNDates(7);
+    const totals = days.map(function (d) { return dayTotal(d.key); });
+    const max = Math.max(GOAL_HIGH, Math.max.apply(null, totals.concat([1])));
+    const chart = document.getElementById('chart');
+    chart.innerHTML = '';
+    days.forEach(function (d, i) {
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+      const h = Math.max(3, Math.round((totals[i] / max) * 56));
+      const bar = document.createElement('div');
+      bar.className = 'bar' + (d.isToday ? ' today' : '');
+      bar.style.height = h + 'px';
+      bar.title = d.key + ': ' + totals[i] + ' kcal';
+      const val = document.createElement('div');
+      val.className = 'bar-val';
+      val.textContent = totals[i] ? String(totals[i]) : '';
+      const lab = document.createElement('div');
+      lab.className = 'bar-label';
+      lab.textContent = d.isToday ? '今' : d.label;
+      col.appendChild(val);
+      col.appendChild(bar);
+      col.appendChild(lab);
+      chart.appendChild(col);
+    });
+  }
+
+  function renderChains() {
+    const grid = document.getElementById('chainGrid');
+    grid.innerHTML = '';
+    Object.keys(MENU).forEach(function (name) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chain-btn' + (state.chain === name ? ' active' : '');
+      btn.innerHTML = name + '<small>' + MENU[name].length + ' 項種子</small>';
+      btn.addEventListener('click', function () {
+        state.chain = name;
+        renderChains();
+        renderMenu();
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderMenu() {
+    const list = document.getElementById('menuList');
+    list.innerHTML = '';
+    const items = MENU[state.chain] || [];
+    items.forEach(function (it, idx) {
+      const kcalShown = Math.round(it.kcal * state.portion);
+      const row = document.createElement('div');
+      row.className = 'item';
+      row.innerHTML =
+        '<div class="info">' +
+          '<div class="name">' + escapeHtml(it.name) +
+            '<span class="badge">種子／參考</span></div>' +
+          '<div class="meta">' + state.chain + ' · 基準 ' + it.kcal + ' kcal · ' +
+            PORTION_LABELS[state.portion] + '</div>' +
+        '</div>' +
+        '<div class="kcal">' + kcalShown + '</div>';
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'add-btn';
+      add.textContent = '加入';
+      add.setAttribute('data-testid', 'add-' + state.chain + '-' + idx);
+      add.addEventListener('click', function () {
+        addEntry({
+          name: it.name,
+          chain: state.chain,
+          baseKcal: it.kcal,
+          portion: state.portion,
+          kcal: kcalShown,
+          source: '種子／參考',
+          estimated: false
+        });
+      });
+      row.appendChild(add);
+      list.appendChild(row);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function addEntry(partial) {
+    const key = todayKey();
+    if (!state.days[key]) state.days[key] = [];
+    const entry = {
+      id: uid(),
+      name: partial.name,
+      chain: partial.chain || '',
+      baseKcal: partial.baseKcal || partial.kcal,
+      portion: partial.portion || 1,
+      kcal: Math.round(partial.kcal),
+      source: partial.source || '種子／參考',
+      estimated: !!partial.estimated,
+      at: new Date().toISOString()
+    };
+    state.days[key].push(entry);
+    save();
+    renderSummary();
+    renderChart();
+    if (state.tab === 'log') renderLog();
+    toast('已加入「' + entry.name + '」· ' + entry.kcal + ' kcal');
+    return entry;
+  }
+
+  function removeEntry(id) {
+    const key = todayKey();
+    state.days[key] = dayEntries(key).filter(function (e) { return e.id !== id; });
+    if (!state.days[key].length) delete state.days[key];
+    save();
+    renderSummary();
+    renderChart();
+    renderLog();
+  }
+
+  function renderLog() {
+    const list = document.getElementById('logList');
+    const entries = dayEntries(todayKey());
+    list.innerHTML = '';
+    if (!entries.length) {
+      list.innerHTML = '<div class="empty">今日尚未加入任何項目。<br/>去「連鎖餐牌」或「茶餐廳估算」加一筆吧。</div>';
+      return;
+    }
+    entries.slice().reverse().forEach(function (e) {
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      const badge = e.estimated
+        ? '<span class="badge est">估算</span>'
+        : '<span class="badge">種子／參考</span>';
+      const portion = PORTION_LABELS[e.portion] || ('×' + e.portion);
+      row.innerHTML =
+        '<div class="info">' +
+          '<div class="name">' + escapeHtml(e.name) + ' ' + badge + '</div>' +
+          '<div class="meta">' +
+            (e.chain ? escapeHtml(e.chain) + ' · ' : '') +
+            portion + ' · ' + escapeHtml(e.source) +
+          '</div>' +
+        '</div>' +
+        '<div class="kcal">' + e.kcal + '</div>';
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del-btn';
+      del.setAttribute('aria-label', '刪除');
+      del.textContent = '×';
+      del.addEventListener('click', function () { removeEntry(e.id); });
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
+  function estimateText(text) {
+    const parts = String(text || '')
+      .split(/[,，、;\n\r／/|]+/)
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean);
+    return parts.map(function (name) {
+      let matched = null;
+      for (let i = 0; i < EST_RULES.length; i++) {
+        const rule = EST_RULES[i];
+        for (let j = 0; j < rule.keys.length; j++) {
+          if (name.indexOf(rule.keys[j]) !== -1) {
+            matched = rule;
+            break;
+          }
+        }
+        if (matched) break;
+      }
+      const kcal = matched ? matched.kcal : EST_DEFAULT;
+      return {
+        name: name,
+        kcal: kcal,
+        matched: !!matched,
+        source: '估算',
+        estimated: true
+      };
+    });
+  }
+
+  function renderEstimateResults(items) {
+    const box = document.getElementById('estResults');
+    box.innerHTML = '';
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">沒有可拆分的項目。</div>';
+      return;
+    }
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    const sum = items.reduce(function (s, x) { return s + x.kcal; }, 0);
+    title.textContent = '估算結果（共 ' + items.length + ' 項 · 約 ' + sum + ' kcal）';
+    box.appendChild(title);
+
+    items.forEach(function (it, idx) {
+      const row = document.createElement('div');
+      row.className = 'item';
+      row.innerHTML =
+        '<div class="info">' +
+          '<div class="name">' + escapeHtml(it.name) +
+            '<span class="badge est">估算</span></div>' +
+          '<div class="meta">' + (it.matched ? '關鍵詞匹配基準' : '未匹配 · 保守預設 ' + EST_DEFAULT) + '</div>' +
+        '</div>' +
+        '<div class="kcal">' + it.kcal + '</div>';
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'add-btn';
+      add.textContent = '加入';
+      add.setAttribute('data-testid', 'est-add-' + idx);
+      add.addEventListener('click', function () {
+        addEntry({
+          name: it.name,
+          chain: '茶餐廳／非連鎖',
+          baseKcal: it.kcal,
+          portion: 1,
+          kcal: it.kcal,
+          source: '估算',
+          estimated: true
+        });
+      });
+      row.appendChild(add);
+      box.appendChild(row);
+    });
+
+    const addAll = document.createElement('button');
+    addAll.type = 'button';
+    addAll.className = 'btn primary';
+    addAll.style.marginTop = '4px';
+    addAll.textContent = '全部加入今日日誌';
+    addAll.addEventListener('click', function () {
+      items.forEach(function (it) {
+        addEntry({
+          name: it.name,
+          chain: '茶餐廳／非連鎖',
+          baseKcal: it.kcal,
+          portion: 1,
+          kcal: it.kcal,
+          source: '估算',
+          estimated: true
+        });
+      });
+      switchTab('log');
+    });
+    box.appendChild(addAll);
+  }
+
+  function switchTab(name) {
+    state.tab = name;
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tab') === name);
+    });
+    document.querySelectorAll('.panel').forEach(function (p) {
+      p.classList.toggle('active', p.id === 'panel-' + name);
+    });
+    if (name === 'log') renderLog();
+  }
+
+  function bindUI() {
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.addEventListener('click', function () {
+        switchTab(t.getAttribute('data-tab'));
+      });
+    });
+    document.querySelectorAll('.portion').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.portion = parseFloat(b.getAttribute('data-p'));
+        document.querySelectorAll('.portion').forEach(function (x) {
+          x.classList.toggle('active', parseFloat(x.getAttribute('data-p')) === state.portion);
+        });
+        renderMenu();
+      });
+    });
+    document.getElementById('estRun').addEventListener('click', function () {
+      const items = estimateText(document.getElementById('estInput').value);
+      renderEstimateResults(items);
+    });
+    document.getElementById('estClear').addEventListener('click', function () {
+      document.getElementById('estInput').value = '';
+      document.getElementById('estResults').innerHTML = '';
+    });
+    document.getElementById('clearToday').addEventListener('click', function () {
+      const key = todayKey();
+      delete state.days[key];
+      save();
+      renderSummary();
+      renderChart();
+      renderLog();
+      toast('已清除今日日誌');
+    });
+  }
+
+  // —— 測試鉤子 ——
+  window.__CALORIE_MENU__ = {
+    add: function (name, chain, portion) {
+      const items = MENU[chain] || [];
+      const it = items.find(function (x) { return x.name === name; }) || items[0];
+      if (!it) return null;
+      const p = portion == null ? 1 : portion;
+      return addEntry({
+        name: it.name,
+        chain: chain,
+        baseKcal: it.kcal,
+        portion: p,
+        kcal: Math.round(it.kcal * p),
+        source: '種子／參考',
+        estimated: false
+      });
+    },
+    portion: function (p) {
+      state.portion = p;
+      document.querySelectorAll('.portion').forEach(function (x) {
+        x.classList.toggle('active', parseFloat(x.getAttribute('data-p')) === p);
+      });
+      renderMenu();
+      return state.portion;
+    },
+    estimate: function (text) {
+      return estimateText(text);
+    },
+    dayTotal: function (key) {
+      return dayTotal(key || todayKey());
+    },
+    clearToday: function () {
+      delete state.days[todayKey()];
+      save();
+      renderSummary();
+      renderChart();
+      renderLog();
+    },
+    getState: function () {
+      return {
+        chain: state.chain,
+        portion: state.portion,
+        tab: state.tab,
+        today: todayKey(),
+        todayTotal: dayTotal(todayKey()),
+        entries: dayEntries(todayKey()).slice()
+      };
+    },
+    chains: Object.keys(MENU),
+    menu: MENU
+  };
+
+  load();
+  bindUI();
+  renderChains();
+  renderMenu();
+  renderSummary();
+  renderChart();
+  renderLog();
+})();
+</script>
+</body>
+</html>

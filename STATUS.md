@@ -1,12 +1,15 @@
 # STATUS — calorie-menu-app
 
-- status: running
+- status: done
 - ticket: feat/calorie-menu-v0-hk-chains
 - branch: feat/calorie-menu-v0-hk-chains
-- tip: (pending)
-- path: A — Mobile Engineer
+- tip: (pending-commit)
+- path: A — Mobile Engineer（直寫 playable；未開 grok CLI）
 - deliverable: /workspace/calorie-menu-app/playable.html
+- bytes: 30566
 - john_notes: /workspace/scratch/calorie-menu-app-john-notes-v0/
 - evidence: /workspace/scratch/calorie-menu-app-evidence-v0/
+- checks: PASS（puppeteer 四項功能＋persist）
+- verify-phone-html: PASS（errors=0，warnings=12，clicks=14，--game）
 - started: 2026-11-10 Asia/Hong_Kong
-- finished: (pending)
+- finished: 2026-11-10 01:20 HKT
