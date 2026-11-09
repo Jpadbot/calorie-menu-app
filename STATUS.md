@@ -2,7 +2,7 @@
 
 - status: running
 - ticket: feat/calorie-menu-v0-hk-chains
-- branch: (ME to open from main/init)
+- branch: feat/calorie-menu-v0-hk-chains
 - tip: (pending)
 - path: A — Mobile Engineer
 - deliverable: /workspace/calorie-menu-app/playable.html
