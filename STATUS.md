@@ -3,7 +3,7 @@
 - status: done
 - ticket: feat/calorie-menu-v0-hk-chains
 - branch: feat/calorie-menu-v0-hk-chains
-- tip: (pending-commit)
+- tip: cb81f60b51f0379951ac22d950fc93e80d9bc865
 - path: A — Mobile Engineer（直寫 playable；未開 grok CLI）
 - deliverable: /workspace/calorie-menu-app/playable.html
 - bytes: 30566
